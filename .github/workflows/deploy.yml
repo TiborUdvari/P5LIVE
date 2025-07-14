@@ -56,7 +56,7 @@ jobs:
             docker rm p5live_container > /dev/null 2>&1 || true
             
             echo "Running the new p5live container..."
-            docker run -d --name p5live_container -p 8000:8000 --pull=always tiborudvari/p5live:latest
+            docker run -d --name p5live_container -p 5001:5001 --pull=always tiborudvari/p5live:latest
             
             echo "Currently running Docker containers:"
             docker ps
