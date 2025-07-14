@@ -1,0 +1,47 @@
+---
+- name: Run act locally with secrets from vault to test Github Actions workflow
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars_files:
+    - vault.yml
+
+  vars:
+    github_event: push
+    workflow_file: .github/workflows/deploy.yml
+
+  tasks:
+    - name: Validate required variables are set
+      ansible.builtin.assert:
+        that:
+          - "docker_hub_username is defined"
+          - "docker_hub_token is defined"
+          - "vps_ssh_key is defined"
+          - "vps_host is defined"
+          - "vps_user is defined"
+        fail_msg: "❌ One or more required secrets are missing from vault.yml!"
+    - name: Ensure act is available
+      ansible.builtin.command: which act
+      register: act_path
+      failed_when: act_path.rc != 0
+      changed_when: false
+
+    - name: Run GitHub Actions locally with act
+      ansible.builtin.shell: |
+        act {{ github_event }} \
+          --workflows {{ workflow_file }} \
+          --secret DOCKER_USERNAME="{{ docker_hub_username }}" \
+          --secret DOCKER_PASSWORD="{{ docker_hub_token }}" \
+          --secret VPS_HOST="{{ vps_host }}" \
+          --secret VPS_USER="{{ vps_user }}" \
+          --secret VPS_SSH_KEY="{{ vps_ssh_key }}"
+      args:
+        chdir: "{{ playbook_dir }}/.."
+      environment:
+        DOCKER_USERNAME: "{{ docker_hub_username }}"
+        DOCKER_PASSWORD: "{{ docker_hub_token }}"
+        VPS_HOST: "{{ vps_host }}"
+        VPS_USER: "{{ vps_user }}"
+        VPS_SSH_KEY: "{{ vps_ssh_key }}"
+      # no_log: true
