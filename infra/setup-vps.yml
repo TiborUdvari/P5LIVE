@@ -1,0 +1,88 @@
+---
+- name: Setup VPS with Standalone Certbot, Nginx, and Docker
+  hosts: vps
+  become: true
+  gather_facts: true
+  vars_files:
+    - vault.yml
+
+  vars:
+    main_domain: "spatialp5.com"
+    editor_domain: "editor.{{ main_domain }}"
+    server_admin_email: "spatialp5@tib.mozmail.com"
+    certbot_admin_email: "{{ server_admin_email }}"
+    certbot_create_if_missing: true
+    certbot_create_standalone_stop_services:
+      - nginx
+
+    certbot_certs:
+      - name: spatialp5.com
+        domains:
+          - editor.spatialp5.com
+
+    nginx_vhosts:
+      - server_name: "editor.spatialp5.com"
+        listen: "443 ssl"
+        state: "present"
+        root: "/var/www/spatialp5.com"
+        index: "index.html index.htm"
+        template: "{{ nginx_vhost_template }}"
+        filename: "editor.spatialp5.com.conf"
+        extra_parameters: |
+          ssl_certificate     /etc/letsencrypt/live/spatialp5.com/fullchain.pem;
+          ssl_certificate_key /etc/letsencrypt/live/spatialp5.com/privkey.pem;
+          ssl_protocols       TLSv1.1 TLSv1.2;
+          ssl_ciphers         HIGH:!aNULL:!MD5;
+
+          location / {
+            proxy_pass         http://127.0.0.1:5001;
+            proxy_http_version 1.1;
+            proxy_set_header   Upgrade $http_upgrade;
+            proxy_set_header   Connection "upgrade";
+
+            proxy_set_header   Host $host;
+            proxy_set_header   X-Real-IP $remote_addr;
+            proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header   X-Forwarded-Proto $scheme;
+          }
+      
+    docker_users:
+      - ubuntu
+    docker_edition: 'ce'
+    docker_install_compose: true
+
+  roles:
+    - geerlingguy.certbot  
+    - geerlingguy.nginx
+    - geerlingguy.docker
+
+  pre_tasks:
+    - name: Update apt cache.
+      apt: update_cache=true cache_valid_time=600
+      when: ansible_os_family == 'Debian'
+      changed_when: false
+
+    - name: Install cron (Debian).
+      apt: name=cron state=present
+      when: ansible_os_family == 'Debian'
+
+  tasks:
+    - name: Flush handlers
+      meta: flush_handlers
+    - name: Add CI deploy public key to authorized_keys
+      ansible.builtin.authorized_key:
+        user: ubuntu
+        state: present
+        key: "{{ lookup('file', './ci-deploy-key.pub') }}"
+
+    - name: Ensure Nginx service is running
+      ansible.builtin.systemd:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: Login to Docker Hub
+      # become: false - no sudo
+      docker_login:
+        username: "{{ docker_hub_username }}"
+        password: "{{ docker_hub_token }}"
