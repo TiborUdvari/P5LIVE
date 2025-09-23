@@ -5072,6 +5072,7 @@ function println(msg){
 
 		// load demos
 		function loadDemos(force = false){
+      console.log("load demos")
 			let demosPath = 'includes/demos/P5L_demos.json?' + currentRevision;
 			if(force){
 				demosPath = 'includes/demos/P5L_demos.json?' + currentRevision + timeStamp();
@@ -5096,6 +5097,33 @@ function println(msg){
 					loadDefault();
 				}
 			});
+      { 
+        console.log("load spatial demos");
+			let spatialDemosPath = 'includes/demos/P5L_spatial_demos.json?' + currentRevision;
+			if(force){
+				demosPath = 'includes/demos/P5L_spatial_demos.json?' + currentRevision + timeStamp();
+			}
+			let request = new XMLHttpRequest();
+			request.open('GET', demosPath, true);
+			request.send();
+			request.addEventListener('load', function(){
+				if(searchSketches('spatial p5', settings.sketches)){
+					removeItemProcess('spatial p5');
+				}
+				let jsonObj = JSON.parse(request.responseText);
+				let jsonItem = jsonObj.structure[0];
+
+				settings.sketches.push({'type':'folder', 'name':jsonItem.name, 'mod':jsonItem.mod, 'toggle':jsonItem.toggle, 'contents':jsonItem.contents});
+
+				updateSettings();
+				initSortable();
+				recursiveImportCode(jsonObj.structure);
+
+				if(settings.fileName == 'new'){
+					loadDefault();
+				}
+			});
+      }
 		}
 
 		function refreshDemos(){

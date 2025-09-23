@@ -1,0 +1,162 @@
+{
+  "version": "1.6.3",
+  "revision": 53,
+  "structure": [
+    {
+      "name": "Spatial p5",
+      "mod": "1747337199474",
+      "type": "folder",
+      "toggle": "expand",
+      "contents": [
+        {
+          "name": "24-network",
+          "mod": "1747395753894",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.10.0/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nlet data = {};\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n}\n\nfunction draw() {\n\tlights();\n\t\n\tnoStroke();\n\tpush();\n\tfill(255, 0, 0);\n\ttranslate(finger.x, finger.y, finger.z);\n\trotateY(frameCount / 200);\n\tsphere(0.005)\n\tpop();\n\n\tfill(255, 255, 255);\n\tfor (let [user, fingers] of Object.entries(data)){\n\t\tif (user == \"undefined\") return;\n\t\tfor (let f of fingers)\t{\n\t\t\tpush();\n\t\t\tconst {x, y, z} = f;\n\t\t\ttranslate(x, y, z);\n\t\t\tsphere(0.01)\n\t\t\tpop();\n\t\t}\n\t}\n}\n\nfunction parseData(obj) {\n\tif(obj.type && obj.type == 'spatialp5') {\n\t\tlet {\n\t\t\tvalue,\n\t\t\tuser\n\t\t} = obj;\n\t\tdata[user] = value;\n\t}\n}\n"
+        },
+        {
+          "name": "23-text-3d",
+          "mod": "1747395418475",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'];\n\nlet textCache = {};\nlet currentTextSize = 32;\nlet currentTextAlign;\n\nfunction textSize(size) {\n  currentTextSize = size;\n}\n\nfunction textAlign(h, v) {\n  currentTextAlign = [h, v];\n}\n\n// Memoized text rendering\nfunction getTextTexture(txt) {\n  const key = `${txt}|${currentTextSize}|${currentTextAlign[0]}|${currentTextAlign[1]}`;\n  if (textCache[key]) return textCache[key];\n\n  let g = createGraphics(1, 1); // dummy to measure text size\n  g.textSize(currentTextSize);\n  g.textAlign(...currentTextAlign);\n  let w = g.textWidth(txt);\n  let h = currentTextSize * 1.2;\n  g.remove();\n\n  // create actual buffer\n  let buffer = createGraphics(ceil(w), ceil(h));\n  buffer.pixelDensity(2);\n  buffer.clear();\n  buffer.textSize(currentTextSize);\n  buffer.textAlign(...currentTextAlign);\n  buffer.fill(255);\n  buffer.text(txt, buffer.width / 2, buffer.height / 2);\n\n  let img = buffer.get();\n  buffer.remove();\n\n  textCache[key] = {\n    img,\n    w: buffer.width,\n    h: buffer.height\n  };\n  return textCache[key];\n}\n\nfunction text3D(txt, x, y, z, baseHeight = 0.03) {\n  const tex = getTextTexture(txt);\n  const aspect = tex.w / tex.h;\n  const planeW = baseHeight * aspect;\n  const planeH = baseHeight;\n\n  push();\n  translate(x, y, z);\n  rotateX(PI);\n  texture(tex.img);\n  plane(planeW, planeH);\n  pop();\n}\n\nfunction setup(){\n\tcreateCanvas(windowWidth, windowHeight, AR);\n\tcurrentTextAlign = [CENTER, CENTER];\n\t// Texts were occluding each other otherwise\n\tgl = this._renderer.GL;\n\tgl.disable(gl.DEPTH_TEST);\n}\n\nfunction draw() {\n\tlet f = finger;\n\tnoStroke();\n\t//let texts = [\"🥲\", \"🫣\", \"🤣\", \"🥸\", \"👿\"];\n\tlet texts = [\"0\", \"1\", \"2\", \"3\", \"4\"];\n\n\tfor (let [i, f] of fingersMain.entries()) {\n\t\ttext3D(texts[i], f.x, f.y, f.z, 0.03);\n\t}\n}"
+        },
+        {
+          "name": "22-finger-pyramid",
+          "mod": "1747394936314",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n}\n\nfunction draw() {\n\tlet f = 0.3;\n\tstroke(255);\n\tstrokeWeight(2);\n\t\n\tfill(0, 0, 0, 0);\n\tnoFill();\n\t\n\tlet s = 0.3;\n\tlet boxTransform = new p5.Matrix();\n\tboxTransform.translate([0.25, -0.25, -f]);\n\tboxTransform.scale([s, s, s]);\n\t\n\tlet vertPositions = [\n\t\t{x: -0.5, y: -0.5, z: -0.5}, \n\t\t{x: 0.5, y: -0.5, z: 0.5}, \n\t\t{x: -0.5, y: -0.5, z: 0.5}, \n\t\t{x: 0.5, y: -0.5, z: -0.5}, \n\t]; \n\n\tfor (let vertPosition of vertPositions) {\n\t  let globalVert = boxTransform.multiplyPoint(vertPosition);\n\t  line(finger.x, finger.y, finger.z, globalVert.x, globalVert.y, globalVert.z);\n\t}\n\n\tpush();\n\tapplyMatrix(boxTransform.mat4);\n\tbox(1, 1, 1);\n\tpop();\n}"
+        },
+        {
+          "name": "21-dbn-chair",
+          "mod": "1747394475202",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n}\n\nfunction draw() {\n\t\n  stroke(255);\n  noFill();\n  fill(0, 0, 0, 0);\n  angleMode(DEGREES);\n  rectMode(CENTER);\n  \n  let f = 0.3;\n  strokeWeight(2);\n  noFill();\n  stroke(255);\n\n  let s = 0.3 * 0.01;\n  let boxTransform = new p5.Matrix();\n  boxTransform.translate([0.25, -0.25, -f]);\n  boxTransform.scale([s, s, s]);\n\n  push();\n  applyMatrix(boxTransform.mat4);\n  box(100, 100, 100);\n  translate(0, -50, 0); \n \n  var d = 5;\n  var h = 11;\n\n  push();\n  translate(30, 0, -30);\n  push();\n  rotateY(45);\n  push();\n  translate(d, 0, 0);\n  line(0, 0, 0, 0, h, 0); \n  pop();\n\n  push();\n  translate(-d, 0, 0);\n  line(0, 0, 0, 0, h, 0); \n  pop();\n\n  push();\n  translate(0, 0, d);\n  line(0, 0, 0, 0, h, 0); \n  pop();\n\n  push();\n  translate(0, 0, -d);\n  line(0, 0, 0, 0, h, 0); \n  pop();\n  pop();\n\n  push();\n  translate(0, h + 1, 0);\n  rotateX(90, 0, 0);\n  fill(0, 0); \n  blendMode(REPLACE);\n  rect(0, 0, 15, 15);\n  blendMode(BLEND);\n  pop();\n\n  push();\n  translate(0, h + 11.5, -7.5);\n  fill(0, 0); \n  blendMode(REPLACE);\n  rect(0, 0, 15, 8);\n  blendMode(BLEND);\n  pop();\n\n  translate(0, h, -7.5);\n  line(0, 0, 0, 0, 7.5, 0); \n\n  pop();\n  rotateY(-90);\n  translate(-35, 2, -50);\n  arc(0, 0, 5, 5, 0, 180);\n\n  push();\n  translate(-2.5, -2, 0);\n  line(0, 0, 0, 0, 2, 0);\n  pop();\n\n  push();\n  translate(2.5, -2, 0);\n  line(0, 0, 0, 0, 2, 0);\n  pop();\n\n  pop();\n}"
+        },
+        {
+          "name": "20-head-background-map",
+          "mod": "1747394220630",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n}\n\nfunction draw() {\n\tconst head = p5xr.instance.viewer.poseMatrix;\n\tconst [x, y, z] = p5xr.instance.viewer.poseMatrix.mat4.slice(12, 15);\n\n\tbackground(0, 0, 0, map(y, -1, 1, 0, 255));\n}"
+        },
+        {
+          "name": "19-head-position",
+          "mod": "1747393833561",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n}\n\nlet boxY = 0;\n\nfunction draw() {\n\tnoFill();\n\tstrokeWeight(2);\n\tstroke(255);\n\tconst head = p5xr.instance.viewer.poseMatrix;\n\t\n\tconst [x, y, z] = p5xr.instance.viewer.poseMatrix.mat4.slice(12, 15);\n\tboxY = ease(y, boxY, 0.025);\n\n\ttranslate(0, boxY, 0);\n\ttranslate(0, 0, -0.5);\n\tbox(0.1);\n}"
+        },
+        {
+          "name": "18-attach-to-head",
+          "mod": "1747393629888",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n}\n\nfunction draw() {\n\tnoFill();\n\tstrokeWeight(2);\n\tstroke(255);\n\tconst head = p5xr.instance.viewer.poseMatrix;\n\tapplyMatrix(head.mat4);\n\t\n\ttranslate(0, 0, -0.5);\n\tbox(0.1);\n}"
+        },
+        {
+          "name": "17-finger-axis",
+          "mod": "1747393394435",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n}\n\nfunction draw() {\n\tlet l = 0.05;\n  \n\tstrokeWeight(3); \n\n\tpush();\n\tapplyMatrix(finger.mat4);\n  \n\t// x axis\n\tstroke(255, 0, 0);\n\tline(0, 0, 0, l, 0, 0);\n\t\n\t// y axis\n\tstroke(0, 255, 0);\n\tline(0, 0, 0, 0, l, 0);\n\t\n\t// z axis\n\tstroke(0, 0, 255);\n\tline(0, 0, 0, 0, 0, l);\n\t\n\tpop();\n}"
+        },
+        {
+          "name": "16-finger-trails",
+          "mod": "1747388587331",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nlet trails = [[], [], [], [], []];\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n}\n\nfunction draw() {\n  sphere(0.0001); // hack, it is currently a problem if we don't draw anything\n  strokeWeight(4);\n  stroke(255);\n  noFill();\n\n  if (fingersArePinched) {\n    for (let i = 0; i < fingersAlt.length; i++) {\n      let finger = fingersAlt[i];\n      trails[i].push({x: finger.x, y: finger.y, z: finger.z}); \n    }\n  } else {\n    trails = [[], [], [], [], []];\n  }\n \n  for (let i = 0; i < trails.length; i++) {\n    const trail = trails[i];\n    beginShape();\n    for (const v of trail) {\n      vertex(v.x, v.y, v.z);\n    }\n    endShape();\n  } \n}"
+        },
+        {
+          "name": "15-pinch-drawing",
+          "mod": "1747388188707",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.10.0/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nlet lines = [];\nlet verts = [];\n\nlet lastClick = 0;\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n}\n\nfunction draw() {\n  p5.instance._pinchTreshold = 25e-3;\n  strokeWeight(5);\n  stroke(255);\n  noFill();\n\n  for (const lineData of lines) {\n    let verts = lineData;\n    beginShape();\n    for (let i = 0; i < verts.length; i++) {\n      const v = verts[i];\n      vertex(v.x, v.y, v.z);\n    }\n    endShape();\n  }\n\n  push();\n  translate(finger.x, finger.y, finger.z);\n  scale(0.003);\n  sphere(1);\n  pop();\n\n  if (frameCount - lastClick < 15) return;\n  if (fingersArePinched) {\n    if (verts.length > 0) {\n      const lv = verts[verts.length - 1];\n      const spaced = dist(lv.x, lv.y, lv.z, finger.x, finger.y, finger.z);\n      if (spaced > 5e-3) {\n        verts.push({ x:finger.x, y: finger.y, z: finger.z });\n      }\n    } else {\n    \tverts.push({ x:finger.x, y: finger.y, z: finger.z });\n\n    }\n  }\n}\n\nfunction fingersPinched() {\n  if (frameCount - lastClick < 50) {\n    lines = [];\n    verts = [];\n    lines.push(verts);\n  } else {\n    verts = [];\n    lines.push(verts);\n  }\n  lastClick = frameCount;\n}"
+        },
+        {
+          "name": "14-fingers-are-pinched",
+          "mod": "1747387754693",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n}\n\nfunction draw() {\n\tp5.instance._pinchTreshold = 25e-3;\n\tnoStroke();\n\t\n\tif (fingersArePinched) {\n\t\tbackground(0);\n\t}\n\n\t// Thumb\n\tpush();\n\tlet thumb = fingersMain[0];\n\ttranslate(thumb.x, thumb.y, thumb.z);\n\tsphere(0.01);\n\tpop();\n\t\n\t// Index\n\tpush();\n\tlet index = finger;\n\ttranslate(index.x, index.y, index.z);\n\tsphere(0.01);\n\tpop();\n}"
+        },
+        {
+          "name": "13-fingers-frame",
+          "mod": "1747387300606",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n}\n\nfunction draw() {\n  noFill();\n  stroke(255);\n\n  let treshold = 0.07;\n  let lp = handLeft[9];\n  let lj = handLeft[6]; // mid joint. Proximal phalanx if you want to be fancy\n  let lt = handLeft[4];\n  let rp = handRight[9];\n  let rj = handRight[6];\n  let rt = handRight[4];\n  \n  let d1 = dist(lp.x, lp.y, lp.z, rt.x, rt.y, rt.z) < treshold;\n  let d2 = dist(rp.x, rp.y, rp.z, lt.x, lt.y, lt.z) < treshold;\n\n  let connected = d1 && d2;\n  strokeWeight(7);\n\n  if (!connected) {\n    beginShape(POINTS); // Left hand\n    vertex(lp.x, lp.y, lp.z);\n    vertex(lj.x, lj.y, lj.z);\n    vertex(lt.x, lt.y, lt.z);\n    endShape();\n\n    beginShape(POINTS); // Right hand\n    vertex(rp.x, rp.y, rp.z);\n    vertex(rj.x, rj.y, rj.z);\n    vertex(rt.x, rt.y, rt.z);\n    endShape();\n  }\n\n  if (connected) {\n    let mid1 = { x: (lt.x + rp.x) / 2, y: (lt.y + rp.y) / 2, z: (lt.z + rp.z) / 2 };\n    let mid2 = { x: (rt.x + lp.x) / 2, y: (rt.y + lp.y) / 2, z: (rt.z + lp.z) / 2 };\n\n    beginShape();\n    vertex(mid1.x, mid1.y, mid1.z);\n    vertex(rj.x, rj.y, rj.z);\n    vertex(mid2.x, mid2.y, mid2.z);\n    vertex(lj.x, lj.y, lj.z);\n    endShape(CLOSE);\n  }\n}"
+        },
+        {
+          "name": "12-fingers-pinch",
+          "mod": "1747386982726",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nlet isBox = true;\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n}\n\nfunction draw() {\n\tnormalMaterial();\n\tpush();\n\ttranslate(finger.x, finger.y, finger.z);\n\tscale(0.01);\n\tif (isBox) {\n\t\tbox(1, 1, 1);\n\t} else {\n\t\tsphere(1);\n\t}\n\tpop();\n}\n\nfunction fingersPinched(){\n\tisBox = !isBox;\n}"
+        },
+        {
+          "name": "11-finger-lines",
+          "mod": "1747385315165",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n\tmainHandMode(RIGHT);\n}\n\nfunction draw() {\n\tstroke(255);\n\tstrokeWeight(2);\n\t\n\tfor (let i = 0; i < fingersMain.length; i++) {\n\t\tconst currentFinger = fingersMain[i];\n\t\tconst nextFinger = fingersMain[(i+1) % fingersMain.length];\n\t\tline(currentFinger.x, currentFinger.y, currentFinger.z, nextFinger.x, nextFinger.y, nextFinger.z);\n\t}\n\t\n\tfor (let i = 0; i < fingersAlt.length; i++) {\n\t\tconst currentFinger = fingersAlt[i];\n\t\tconst nextFinger = fingersAlt[(i+1) % fingersAlt.length];\n\t\tline(currentFinger.x, currentFinger.y, currentFinger.z, nextFinger.x, nextFinger.y, nextFinger.z);\n\t}\n}"
+        },
+        {
+          "name": "10-individual-fingers",
+          "mod": "1747386365673",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n}\n\nfunction draw() {\n\tnormalMaterial();\n\tnoStroke();\n\t\n\t// Left Thumb\n\tpush();\n\ttranslate(fingersLeft[0].x, fingersLeft[0].y, fingersLeft[0].z);\n\tsphere(0.01);\n\tpop();\n\t\n\t// Left Index\n\tpush();\n\ttranslate(fingersLeft[1].x, fingersLeft[1].y, fingersLeft[1].z);\n\tsphere(0.01);\n\tpop();\n\t\n\t// Left Middle\n\tpush();\n\ttranslate(fingersLeft[2].x, fingersLeft[2].y, fingersLeft[2].z);\n\tsphere(0.01);\n\tpop();\n\t\n\t// Left Ring\n\tpush();\n\ttranslate(fingersLeft[3].x, fingersLeft[3].y, fingersLeft[3].z);\n\tsphere(0.01);\n\tpop();\n\t\n\t// Left Pinky\n\tpush();\n\ttranslate(fingersLeft[4].x, fingersLeft[4].y, fingersLeft[4].z);\n\tsphere(0.01);\n\tpop();\n}"
+        },
+        {
+          "name": "9-all-hands-radiuses",
+          "mod": "1747384916290",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n\tmainHandMode(RIGHT);\n}\n\nfunction draw() {\n\tnormalMaterial();\n\tfor (let joint of hands) {\n\t\tpush();\n\t\ttranslate(joint.x, joint.y, joint.z);\n\t\tscale(joint.rad * 0.5);\n\t\tbox(1);\n\t\tpop();\n\t}\n}"
+        },
+        {
+          "name": "8-all-hands",
+          "mod": "1747384651663",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n\tmainHandMode(RIGHT);\n}\n\nfunction draw() {\n\tnormalMaterial();\n\tfor (let joint of hands) {\n\t\tpush();\n\t\ttranslate(joint.x, joint.y, joint.z);\n\t\tsphere(0.01);\n\t\tpop();\n\t}\n}"
+        },
+        {
+          "name": "07-index-finger",
+          "mod": "1747352810886",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://127.0.0.1:8081/dist/p5xr.min.js'\n];\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n}\n\nfunction draw() {\n\tmainHandMode(RIGHT);\n\n\tnormalMaterial();\n\ttranslate(fingersMain[0].x, fingersMain[0].y, fingersMain[0].z);\n\tsphere(0.05);\n}"
+        },
+        {
+          "name": "06-video",
+          "mod": "1747349725103",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nlet vid;\n\nfunction preload(){\n\tvid = createVideo(['https://onceuponatitle.com/2004-the-life-aquatic-with-steve-zissou-.mp4']);\n    vid.hide();\n\tvid.loop();\n}\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n\timageMode(CENTER);\n}\n\nfunction draw() {\n\tbackground(0, 0, 0, 125);\n\ttranslate(0, 0, -0.5);\n\tscale(1, -1, 1);\n\tscale(0.5);\n\timage(vid, 0, 0, 1.920, 1.080);\n}"
+        },
+        {
+          "name": "05-images",
+          "mod": "1747346672299",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nconst imgNum = 12;\nlet images = [];\n\nfunction preload() {\n\trandomSeed(99);\n\n\tfor (var i = 0; i < imgNum; i++){\n\t\tconst n = floor(random(1, 120));\n\t\tconst im = loadImage(\"https://placedog.net/1024/1024?id=\" + n);\n\t\timages.push(im);\n\t}\n}\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n\timageMode(CENTER);\n}\n\nfunction draw() {\n\tbackground(0, 0, 0, 125);\n\trotateY(frameCount / 2000);\n\tfor (var i = 0; i < imgNum; i++) {\n\t\tpush();\n\t\trotateY(Math.PI * 2 / imgNum * i);\n\t\ttranslate(0, 0, -0.5);\n\t\tscale(1, -1, 1); \n\t\timage(images[i], 0, 0, 0.25, 0.25);\n\t\tpop();\n\t}\n}"
+        },
+        {
+          "name": "04-2d-primitives",
+          "mod": "1747339806625",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n\trectMode(CENTER);\n}\n\nfunction draw() {\n\ttranslate(0, 0, -0.5);\n\tstrokeWeight(2);\n\tstroke(255);\n\tnoFill();\n\t\n\t// Rect\n\tpush();\n\trotateY(frameCount / 200);\n\trect(0, 0, 0.1, 0.1);\n\tpop();\n\t\n\t// Ellipse\n\tpush();\n\ttranslate(0.2, 0, 0);\n\trotateY(frameCount / 200);\n\tellipse(0, 0, 0.1, 0.1);\n\tpop();\n\t\n\t// Line\n\tpush();\n\ttranslate(-0.2, 0, 0);\n\trotateY(frameCount / 200);\n\tscale(0.5);\n\tline(-0.1, -0.1, 0.1, 0.1);\n\tpop();\n\t\n\t// Arc\n\tpush();\n\ttranslate(0, 0.2, 0);\n\trotateY(frameCount / 200);\n\tarc(0, 0, 0.1, 0.1, PI, TWO_PI);\n\tpop();\n\t\n\t// Triangle\n\tpush();\n\ttranslate(-0.2, 0.2, 0);\n\tscale(0.1);\n\trotateY(frameCount / 200);\n\ttranslate(-0.5, -0.5, 0);\n\ttriangle(0, 0, 1, 0, 0, 1);\n\tpop();\n\t\n\t// Vertex triangle\n\tpush();\n\ttranslate(0.2, 0.2, 0);\n    rotateY(frameCount / 300);\n    scale(0.5);\n    beginShape();\n    vertex(-0.1, 0.1, 0);\n    vertex(0, -0.1, 0);\n    vertex(0.1, 0.1, 0);\n\tendShape(CLOSE);\n\tpop();\n}"
+        },
+        {
+          "name": "03-obj-model",
+          "mod": "1747339198850",
+          "type": "sketch",
+          "code": "// https://p5js.org/examples/3d-materials/\n\nlet libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nlet astronaut;\n\nfunction preload() {\n\tastronaut = loadModel('https://p5js.org/assets/astronaut.obj');\n}\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n}\n\nfunction draw() {\n\tnormalMaterial();\n\ttranslate(0, 0, -0.75);\n\tscale(0.01);\n\ttranslate(0, sin(frameCount / 100), 0);\n\trotateY(sin(frameCount / 100) * 0.1);\n\tmodel(astronaut);\n}"
+        },
+        {
+          "name": "02-3d-primitives",
+          "mod": "1747337738226",
+          "type": "sketch",
+          "code": "// Shape Primitives\n// https://p5js.org/examples/3d-geometries/\n\nlet libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n}\n\nfunction draw() {\n\ttranslate(0, 0, -0.5);\n\tfill(255);\n\tstroke(0);\n\n\tpush();\n\trotateX(frameCount / 500); \n\trotateY(frameCount / 500); \n\trotateZ(frameCount / 500); \n\tbox(0.1)\n\tpop();\n\t\n\t// Plane\n\tpush();\n\ttranslate(0.2, 0, 0);\n\trotateY(frameCount / 100); \n\tplane(0.1)\n\tpop();\n\t\n\t// Cylinder\n\tpush();\n\ttranslate(-0.2, 0, 0);\n\trotateX(frameCount / 500); \n\trotateY(frameCount / 500); \n\trotateZ(frameCount / 500); \n\tcylinder(0.025, 0.1)\n\tpop();\n\t\n\t// Cone\n\tpush();\n\ttranslate(0, 0.2, 0);\n\trotateX(frameCount / 500); \n\trotateY(frameCount / 500); \n\trotateZ(frameCount / 500); \n\tcone(0.05, 0.1)\n\tpop();\n\t\n\t// Torus\n\tpush();\n\ttranslate(0, -0.2, 0);\n\trotateX(frameCount / 500); \n\trotateY(frameCount / 500); \n\trotateZ(frameCount / 500); \n\ttorus(0.05, 0.02)\n\tpop();\n\t\n\t// Sphere\n\tpush();\n\ttranslate(-0.2, -0.2, 0);\n\trotateX(frameCount / 500); \n\trotateY(frameCount / 500); \n\trotateZ(frameCount / 500); \n\tsphere(0.05)\n\tpop();\n\t\n\t// Sphere\n\tpush();\n\ttranslate(0.2, -0.2, 0);\n\trotateX(frameCount / 500); \n\trotateY(frameCount / 500); \n\trotateZ(frameCount / 500); \n\tellipsoid(0.025, 0.1)\n\tpop();\n}"
+        },
+        {
+          "name": "01-hello-cube",
+          "mod": "1747337462900",
+          "type": "sketch",
+          "code": "let libs = [\n\t'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.5/p5.min.js',\n\t'https://cdn.jsdelivr.net/npm/p5.xr@latest/dist/p5xr.min.js'\n];\n\nlet x = 0.3;\n\nfunction setup() {\n\tcreateCanvas(windowWidth, windowHeight, AR);\n}\n\nfunction draw() {\n\ttranslate(0, 0, -0.5);\n\tbox(x);\n}\n\n"
+        }
+      ]
+    }
+  ],
+  "count": {
+    "sketches": 24,
+    "folders": 1
+  }
+}
