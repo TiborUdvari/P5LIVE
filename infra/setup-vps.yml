@@ -1,4 +1,5 @@
 ---
+# ansible version: ansible [core 2.20.1]
 - name: Setup VPS with Standalone Certbot, Nginx, and Docker
   hosts: vps
   become: true
@@ -29,6 +30,9 @@
         template: "{{ nginx_vhost_template }}"
         filename: "editor.spatialp5.com.conf"
         extra_parameters: |
+          # Increase buffer size to allow long URLs for share feature
+          large_client_header_buffers 4 32k;
+
           ssl_certificate     /etc/letsencrypt/live/spatialp5.com/fullchain.pem;
           ssl_certificate_key /etc/letsencrypt/live/spatialp5.com/privkey.pem;
           ssl_protocols       TLSv1.1 TLSv1.2;
