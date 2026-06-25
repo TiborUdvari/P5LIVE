@@ -734,7 +734,7 @@ function println(msg){
 
 		/* INIT */
 		let currentVersion = '1.6.3';
-		let currentRevision = 53;
+		let currentRevision = 54;
 		let developBranch = false;
 
 		// resetP5(); // manual reset
@@ -4899,19 +4899,30 @@ function println(msg){
 		}
 
 		function recursiveImportCode(obj){
+			let ok = true;
 			for (let k in obj) {
 				let ric = obj[k];
 
 				// if sketch, add to localStorage
 				if(ric.type == 'sketch'){
-					localStorage.setItem(ric.name, ric.code);
+					try {
+						localStorage.setItem(ric.name, ric.code);
+					} catch(e){
+						// e.g. QuotaExceededError — surface it instead of silently
+						// leaving a listed sketch with no code ("Sketch code missing")
+						console.error('recursiveImportCode: failed to store "' + ric.name + '"', e);
+						ok = false;
+					}
 				}
 
 				// if folder, go deeper
 				if(ric.type == 'folder'){
-					recursiveImportCode(ric.contents);
+					if(!recursiveImportCode(ric.contents)){
+						ok = false;
+					}
 				}
 			};
+			return ok;
 		}
 
 		function recursiveDupCheck(obj, objHold){
@@ -5072,58 +5083,51 @@ function println(msg){
 
 		// load demos
 		function loadDemos(force = false){
-      console.log("load demos")
-			let demosPath = 'includes/demos/P5L_demos.json?' + currentRevision;
-			if(force){
-				demosPath = 'includes/demos/P5L_demos.json?' + currentRevision + timeStamp();
-			}
+			// cache-bust with a timestamp when forcing a refresh
+			let rev = currentRevision + (force ? timeStamp() : '');
+			importDemoFile('includes/demos/P5L_demos.json?' + rev);
+			importDemoFile('includes/demos/P5L_spatial_demos.json?' + rev);
+		}
+
+		// fetch a demos JSON and merge its top-level folder into the sketch list.
+		// the sketch code is written to localStorage BEFORE the folder's names are
+		// persisted, so a sketch can never end up listed without its code (which is
+		// what triggers the "Sketch code missing, remove from list?" dialog).
+		function importDemoFile(path){
 			let request = new XMLHttpRequest();
-			request.open('GET', demosPath, true);
+			request.open('GET', path, true);
 			request.send();
 			request.addEventListener('load', function(){
-				if(searchSketches('demos', settings.sketches)){
-					removeItemProcess('demos');
+				let jsonObj;
+				try {
+					jsonObj = JSON.parse(request.responseText);
+				} catch(e){
+					console.error('loadDemos: failed to parse "' + path + '"', e);
+					return;
 				}
-				let jsonObj = JSON.parse(request.responseText);
 				let jsonItem = jsonObj.structure[0];
 
-				settings.sketches.push({'type':'folder', 'name':jsonItem.name, 'mod':jsonItem.mod, 'toggle':jsonItem.toggle, 'contents':jsonItem.contents});
+				// clear any stale copy of this folder (names + code) before re-importing.
+				// match on the exact folder name from the JSON — searchSketches is
+				// case-sensitive, so 'Spatial p5' must not be searched as 'spatial p5'.
+				if(searchSketches(jsonItem.name, settings.sketches)){
+					removeItemProcess(jsonItem.name);
+				}
 
+				// write the code first; only list the folder if every sketch stored OK
+				if(!recursiveImportCode(jsonObj.structure)){
+					alertMsg('Demos could not be loaded — browser storage may be full.');
+					return;
+				}
+
+				settings.sketches.push({'type':'folder', 'name':jsonItem.name, 'mod':jsonItem.mod, 'toggle':jsonItem.toggle, 'contents':jsonItem.contents});
 				updateSettings();
 				initSortable();
-				recursiveImportCode(jsonObj.structure);
 
 				if(settings.fileName == 'new'){
 					loadDefault();
 				}
 			});
-      { 
-        console.log("load spatial demos");
-			let spatialDemosPath = 'includes/demos/P5L_spatial_demos.json?' + currentRevision;
-			if(force){
-				demosPath = 'includes/demos/P5L_spatial_demos.json?' + currentRevision + timeStamp();
-			}
-			let request = new XMLHttpRequest();
-			request.open('GET', demosPath, true);
-			request.send();
-			request.addEventListener('load', function(){
-				if(searchSketches('spatial p5', settings.sketches)){
-					removeItemProcess('spatial p5');
-				}
-				let jsonObj = JSON.parse(request.responseText);
-				let jsonItem = jsonObj.structure[0];
-
-				settings.sketches.push({'type':'folder', 'name':jsonItem.name, 'mod':jsonItem.mod, 'toggle':jsonItem.toggle, 'contents':jsonItem.contents});
-
-				updateSettings();
-				initSortable();
-				recursiveImportCode(jsonObj.structure);
-
-				if(settings.fileName == 'new'){
-					loadDefault();
-				}
-			});
-      }
 		}
 
 		function refreshDemos(){
