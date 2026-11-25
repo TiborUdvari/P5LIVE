@@ -56,13 +56,18 @@ jobs:
             docker rm p5live_container > /dev/null 2>&1 || true
             
             echo "Running the new p5live container..."
-            docker run -d --name p5live_container -p 5001:5001 --pull=always tiborudvari/p5live:latest
+            # unless-stopped: the container comes back after a server reboot.
+            # 127.0.0.1: nginx on the server is the only client of the app port.
+            docker run -d --name p5live_container --restart unless-stopped -p 127.0.0.1:5001:5001 --pull=always tiborudvari/p5live:latest
             
             echo "Currently running Docker containers:"
             docker ps
   
-            echo "Pruning all unused Docker objects including volumes..."
-            docker system prune -af --volumes
+            # Only the old images that have no tag now. `docker system prune`
+            # works on the full server: it also deletes the stopped containers,
+            # the unused images and the volumes of each other project there.
+            echo "Removing old images without a tag..."
+            docker image prune -f
           EOF
         shell: bash
 
