@@ -61,8 +61,11 @@ jobs:
             echo "Currently running Docker containers:"
             docker ps
   
-            echo "Pruning all unused Docker objects including volumes..."
-            docker system prune -af --volumes
+            # Only the old images that have no tag now. `docker system prune`
+            # works on the full server: it also deletes the stopped containers,
+            # the unused images and the volumes of each other project there.
+            echo "Removing old images without a tag..."
+            docker image prune -f
           EOF
         shell: bash
 
