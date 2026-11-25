@@ -57,7 +57,8 @@ jobs:
             
             echo "Running the new p5live container..."
             # unless-stopped: the container comes back after a server reboot.
-            docker run -d --name p5live_container --restart unless-stopped -p 5001:5001 --pull=always tiborudvari/p5live:latest
+            # 127.0.0.1: nginx on the server is the only client of the app port.
+            docker run -d --name p5live_container --restart unless-stopped -p 127.0.0.1:5001:5001 --pull=always tiborudvari/p5live:latest
             
             echo "Currently running Docker containers:"
             docker ps
